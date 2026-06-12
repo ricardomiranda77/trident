@@ -1,0 +1,749 @@
+[include mmu/base/*.cfg]
+[include mmu/optional/client_macros.cfg]
+[include mmu/addons/mmu_erec_cutter.cfg]
+# 24/05/2026
+
+
+
+[include mainsail.cfg]
+[include stealthburner_leds.cfg]
+[include test_speed.cfg]
+[include Line_Purge.cfg]
+
+# Enable object exclusion
+[exclude_object]
+
+
+
+
+[mcu]
+serial: /dev/ttyAMA0
+restart_method: command
+
+[virtual_sdcard]
+path: /home/miranda/printer_data/gcodes
+on_error_gcode: CANCEL_PRINT
+
+[printer]
+kinematics: corexy
+max_velocity: 500  
+max_accel: 10000             #Max 4000
+max_z_velocity: 15       #Max 15 for 12V TMC Drivers, can increase for 24V
+max_z_accel: 250
+square_corner_velocity: 12.0
+
+
+
+[idle_timeout]
+timeout: 1800 # 30 minutos
+gcode:
+    {% if printer.pause_resume.is_paused %}
+        M117 Idle mas pausado, mantendo aquecedores.
+    {% else %}
+        TURN_OFF_HEATERS
+        M84
+        SET_FAN_SPEED FAN=nevermore SPEED=0
+    {% endif %}
+
+[firmware_retraction]
+retract_length: 0.5      # Distância de retração
+retract_speed: 35        # Velocidade de retração
+unretract_speed: 35      # Velocidade de retorno
+
+[filament_switch_sensor sensor_filamento]
+pause_on_runout: True
+switch_pin: EBBCan: PB6
+
+
+#####################################################################
+#   X/Y Stepper Settings
+#####################################################################
+
+##  B Stepper - Left
+##  Connected to MOTOR_0
+##  Endstop connected to DIAG_0
+[stepper_x]
+step_pin: PF13
+dir_pin: PF12
+enable_pin: !PF14
+rotation_distance: 40
+microsteps: 64
+endstop_pin: EBBCan: PB7 #PG6 # J27
+position_min: -10
+position_endstop: 254
+position_max: 254
+homing_speed: 40   #Max 100
+homing_positive_dir: true
+homing_retract_dist: 5
+
+
+
+[tmc2240 stepper_x]
+cs_pin: PC4           # Chip select exclusivo para o X
+spi_software_mosi_pin: PA7
+spi_software_miso_pin: PA6
+spi_software_sclk_pin: PA5
+interpolate: false
+run_current: 0.850
+#hold_current: 0.6
+stealthchop_threshold: 0
+
+
+
+##  A Stepper - Right
+##  Connected to MOTOR_1
+##  Endstop connected to DIAG_1
+[stepper_y]
+step_pin: PG0
+dir_pin: PG1
+enable_pin: !PF15
+rotation_distance: 40
+microsteps: 64
+endstop_pin: PG9 #PG9 # J29
+position_min: 0
+position_endstop: 256
+position_max: 256
+homing_speed: 40  #Max 100
+homing_positive_dir: true
+homing_retract_dist: 5
+
+[tmc2240 stepper_y]
+cs_pin: PD11         # Chip select exclusivo para o Y
+spi_software_mosi_pin: PA7
+spi_software_miso_pin: PA6
+spi_software_sclk_pin: PA5
+interpolate: false
+run_current: 0.850
+#hold_current: 0.6
+stealthchop_threshold: 0
+
+
+
+#####################################################################
+#   Z Stepper Settings
+#####################################################################
+
+##  Z0 Stepper - Front Left
+##  Connected to MOTOR_2
+##  Endstop connected to DIAG_2
+[stepper_z]
+step_pin: PF11
+dir_pin: PG3
+enable_pin: !PG5
+rotation_distance: 4   
+microsteps: 32
+endstop_pin: probe:z_virtual_endstop
+position_max: 250
+position_min: -5.0
+homing_speed: 10.0 
+second_homing_speed: 3
+homing_retract_dist: 2
+
+##  Make sure to update below for your relevant driver (2208 or 2209)
+[tmc2209 stepper_z]
+uart_pin: PC6
+interpolate: false
+run_current: 0.650
+sense_resistor: 0.100
+stealthchop_threshold: 99999
+
+##  Z1 Stepper - Rear Center
+##  Connected to MOTOR_3
+[stepper_z1]
+step_pin: PG4
+dir_pin: PC1
+enable_pin: !PA0
+rotation_distance: 4
+microsteps: 32
+
+##  Make sure to update below for your relevant driver (2208 or 2209)
+[tmc2209 stepper_z1]
+uart_pin: PC7
+interpolate: false
+run_current: 0.650
+sense_resistor: 0.100
+stealthchop_threshold: 99999
+
+##  Z2 Stepper - Front Right
+##  Connected to MOTOR_4
+[stepper_z2]
+step_pin: PF9
+dir_pin: PF10
+enable_pin: !PG2
+rotation_distance: 4  
+microsteps: 32
+
+##  Make sure to update below for your relevant driver (2208 or 2209)
+[tmc2209 stepper_z2]
+uart_pin: PF2
+interpolate: false
+run_current: 0.650
+sense_resistor: 0.100
+stealthchop_threshold: 99999
+
+
+#####################################################################
+#   Bed Heater
+#####################################################################
+
+[heater_bed]
+heater_pin: PA1 # BED_OUT
+sensor_type: Generic 3950
+sensor_pin: PF3 # J44
+max_power: 1
+smooth_time: 3.0
+pwm_cycle_time: 0.0166 ; 60hz
+min_temp: 0
+max_temp: 120
+
+[verify_heater heater_bed]
+max_error: 120
+check_gain_time: 60 # Mesa 24V demora mais que AC para detectar erro
+hysteresis: 5
+heating_gain: 1
+#[temperature_sensor mesa]
+#sensor_type: Generic 3950
+#sensor_pin: PF6 # J48
+#min_temp: 0
+#max_temp: 120
+
+#####################################################################
+#   Probe
+#####################################################################
+
+[probe]
+pin:  EBBCan: PB8 # PG10 # J31
+x_offset: 0
+y_offset: 0
+#z_offset: 0
+speed: 3
+lift_speed: 10
+samples: 2
+samples_result: median
+sample_retract_dist: 2.0
+samples_tolerance: 0.01
+samples_tolerance_retries: 3
+
+activate_gcode:
+    {% set PROBE_TEMP = 150 %}
+    {% set MAX_TEMP = PROBE_TEMP + 5 %}
+    {% set ACTUAL_TEMP = printer.extruder.temperature %}
+    {% set TARGET_TEMP = printer.extruder.target %}
+    
+    {% if TARGET_TEMP > PROBE_TEMP %}
+    { action_respond_info('Extruder temperature target of %.1fC is too high, lowering to %.1fC' % (TARGET_TEMP, PROBE_TEMP)) }
+    M109 S{ PROBE_TEMP }
+    {% else %}
+    # Temperature target is already low enough, but nozzle may still be too hot.
+    {% if ACTUAL_TEMP > MAX_TEMP %}
+    { action_respond_info('Extruder temperature %.1fC is still too high, waiting until below %.1fC' % (ACTUAL_TEMP, MAX_TEMP)) }
+    TEMPERATURE_WAIT SENSOR=extruder MAXIMUM={ MAX_TEMP }
+    {% endif %}
+    {% endif %}
+    
+    ################################## HOMING ###########
+[safe_z_home]
+##  XY Location of the Z Endstop Switch
+##  Update -10,-10 to the XY coordinates of your endstop pin 
+##  (such as 157,305) after going through Z Endstop Pin
+##  Location Definition step.
+home_xy_position: 126,126
+speed:200
+z_hop:15
+
+############################################ CANBUS #################################################
+
+[mcu EBBCan]
+canbus_uuid: 572b671f3347
+
+
+[adxl345]
+cs_pin: EBBCan: PB12
+spi_software_sclk_pin: EBBCan: PB10
+spi_software_mosi_pin: EBBCan: PB11
+spi_software_miso_pin: EBBCan: PB2
+axes_map: x,y,z
+
+[resonance_tester]
+accel_chip:adxl345
+probe_points:
+    126,126,20
+    
+    
+[extruder]
+step_pin: EBBCan: PD0
+dir_pin: !EBBCan: PD1
+enable_pin: !EBBCan: PD2
+microsteps: 16
+rotation_distance: 22.42053 #22.647  #Bondtech 5mm Drive Gears
+gear_ratio: 50:10
+nozzle_diameter: 0.400
+filament_diameter: 1.750
+heater_pin: EBBCan: PB13
+sensor_type: ATC Semitec 104NT-4-R025H42G ## Generic 3950 ##
+sensor_pin: EBBCan: PA3
+min_temp: 1
+max_temp: 300
+min_extrude_temp: 170
+max_extrude_cross_section: 50
+max_extrude_only_distance: 700
+#control = pid
+#pid_kp = 38.432
+#pid_ki = 12.201
+#pid_kd = 30.265
+
+[tmc2209 extruder]
+uart_pin: EBBCan: PA15
+run_current: 0.550
+stealthchop_threshold: 0
+interpolate: false
+sense_resistor: 0.11
+
+[verify_heater extruder]
+max_error: 200
+check_gain_time: 20
+hysteresis: 5
+heating_gain: 2
+
+   
+#####################################################################
+#   Fan/Temp Control
+#####################################################################
+
+[fan] # fan de resfriamento da peça
+pin: EBBCan: PA0
+kick_start_time: 0.5
+#off_below: 0.10
+
+[heater_fan hotend_fan]
+##  Hotend Fan - FAN1
+pin: EBBCan: PA1
+max_power: 1.0
+kick_start_time: 0.5
+heater: extruder
+heater_temp: 50.0
+
+[controller_fan controller_fan]
+##  Controller fan - FAN2
+pin: PD12 # J52
+kick_start_time: 0.5
+heater: heater_bed
+max_power: 0.8
+shutdown_speed: 0.0
+
+
+#[temperature_sensor Octopus]
+#sensor_type: temperature_mcu
+#min_temp: 0
+#max_temp: 100
+
+[temperature_sensor Toolhead]
+sensor_type: temperature_mcu
+sensor_mcu: EBBCan
+min_temp: 0
+max_temp: 100
+
+[temperature_fan _Rasp_Fan]
+pin: PD14          # Mude para o pino onde o cooler está conectado
+sensor_type: temperature_host
+control: watermark         
+target_temp: 55.0          # Temperatura alvo para ligar o cooler
+max_delta: 5.0             
+min_temp: 0
+max_temp: 100
+max_power: 0.6
+shutdown_speed: 0.0
+
+[temperature_fan chamber]
+pin: PD13 # J53
+max_power: 1.0
+shutdown_speed: 0.0
+kick_start_time: 5.0
+cycle_time: 0.01
+#off_below: 0.1
+control: watermark
+target_temp: 60.0
+sensor_type: Generic 3950
+sensor_pin: PF4 
+min_temp: 0
+max_temp: 70
+gcode_id: C
+
+[gcode_macro M141]
+gcode:
+    {% set s = params.S|default(0)|float %}
+    SET_TEMPERATURE_FAN_TARGET temperature_fan="chamber" target={s}
+    
+    
+    #gcode: SET_TEMPERATURE_FAN_TARGET temperature_fan="chamber" target={params.S|default(0)|float}
+
+[fan_generic nevermore]
+pin: PD15  # porta da fan
+cycle_time: 0.01
+hardware_pwm: True
+shutdown_speed: 0
+kick_start_time: 1.0
+
+[gcode_macro SET_NEVERMORE]
+gcode:
+    {% set speed = params.SPEED|default(1)|float %}
+    SET_FAN_SPEED FAN=nevermore SPEED={speed}
+
+[gcode_macro NEVERMORE_ON]
+gcode:
+    SET_FAN_SPEED FAN=nevermore SPEED=1
+
+[gcode_macro NEVERMORE_OFF]
+gcode:
+    SET_FAN_SPEED FAN=nevermore SPEED=0
+    
+    
+[output_pin caselight]
+pin: PA3 # HE1
+pwm:true
+shutdown_value: 0
+value:1
+cycle_time: 0.005
+#pwm_cycle_time: 0.0166 ; 60hz
+
+
+#############################################################################################
+#
+#   MACROS
+#
+##############################################################################################
+
+##################### Z TILT ##########################
+[z_tilt]
+
+z_positions:
+    -50, 18
+    126, 298
+    300, 18
+points:
+    30, 30
+    126, 220
+    220, 30
+
+speed: 200
+horizontal_move_z: 10
+retries: 5
+retry_tolerance: 0.0075
+
+
+
+#################### BED MESH ##############################################################
+[bed_mesh]
+speed: 300
+horizontal_move_z: 5
+mesh_min:  30 , 30   
+mesh_max: 220, 220 # 225,225
+fade_start: 0.6
+fade_end: 10.0
+probe_count: 5,5
+algorithm: bicubic
+adaptive_margin: 10
+mesh_pps: 2, 2
+zero_reference_position: 126,126
+
+      
+
+    
+############################ CLEAN NOZZLE ####################################################
+[gcode_macro CLEAN_NOZZLE]
+variable_start_x: 80
+variable_start_y: 256
+variable_start_z: 15
+variable_wipe_dist: -50
+variable_wipe_qty: 8
+variable_wipe_spd: 100
+variable_raise_distance: 10
+
+gcode:
+   {% if "xyz" not in printer.toolhead.homed_axes %}
+   G28
+ {% endif %}
+ 
+ G90                                            ; absolute positioning
+ ## Move nozzle to start position
+ G1 X{start_x} Y{start_y} F6000
+ G1 Z{start_z} F1500
+
+ ## Wipe nozzle
+ {% for wipes in range(1, (wipe_qty + 1)) %}
+   G1 X{start_x + wipe_dist}  F{wipe_spd * 60} ; 220-50x258
+   G1 X{start_x} F{wipe_spd * 60}                        ; 220x258
+  
+   
+ {% endfor %}
+ ## Raise nozzle
+ G1 Z{raise_distance}
+
+
+
+
+############################# M600 ######################################
+
+[gcode_macro M600]
+gcode:
+    {% set X = params.X|default(10)|float %}
+    {% set Y = params.Y|default(10)|float %}
+    {% set Z = params.Z|default(15)|float %}
+    SAVE_GCODE_STATE NAME=M600_state
+    PAUSE
+    G91
+    G1 E-.8 F2700
+    G1 Z{Z}
+    G90
+    G1 X{X} Y{Y} F3000
+    G91
+    G1 E-50 F1000
+    RESTORE_GCODE_STATE NAME=M600_state
+    
+#################################################################
+
+
+
+#################################################################    
+###################### START ####################################
+
+#SET_PRINT_STATS_INFO TOTAL_LAYER=[total_layer_count]
+
+#print_start extruder_temp=[first_layer_temperature] bed_temp=[first_layer_bed_temperature]
+
+[gcode_macro PRINT_START]
+gcode:
+  {% set BED = params.BED_TEMP|int %}
+  {% set EXTRUDER = params.EXTRUDER_TEMP|int %}
+  {% set CHAMBER_T = params.CHAMBER_TEMP|int %}
+  M117 Ativar filtro nevermore
+  SET_FAN_SPEED FAN=nevermore SPEED=0.6
+  
+  M141 S{CHAMBER_T}
+  M140 S{BED}
+  M117 HOME
+  G28
+  G1 X240 Y30 Z25 F2000
+  M117 WAIT BED TEMP
+  M190 S{BED}  ;Set bed temperature and wait
+  M117 Wait HOTEND TEMP 170C FOR CLEAN NOZZLE
+  M109 S170
+  M117 CLEAN NOZZLE
+  STATUS_CLEANING
+  CLEAN_NOZZLE
+  G92 E0
+  G1 E-2 F300
+  
+  M109 S150
+  M117 Z_TILT
+  STATUS_LEVELING
+  Z_TILT_ADJUST  ;Z Tilt adjust
+  M117 HOME Z
+  G28 Z
+  M117 BED MESH
+  STATUS_MESHING
+  BED_MESH_CLEAR  ;Clear Bed Mesh
+  BED_MESH_CALIBRATE ADAPTIVE=1  ;Bed Mesh Calibration Adaptive
+  G1 X20 Y30 Z15 F3000
+  M117 WAIT HOTEND TEMP
+  STATUS_HEATING
+  M109 S{EXTRUDER}  ;Set extruder temperature and wait
+  STATUS_PRINTING
+  M117 START PRINT
+  #### PURGA  ####
+  G92 E0 ; Reinicia a posição do extrusor
+  G1 Z2.0 F3000 ; Sobe o bico para não raspar na mesa
+  G1 X20 Y5 Z0.3 F5000.0 ; Vai para a posição inicial (frente esquerda)
+  G1 X80 Y5 Z0.3 F1000.0 E15 ; Faz a linha grossa: anda apenas 60mm (X20 a X80) e injeta bastante filamento (E15)
+  G92 E0 ; Reinicia o extrusor novamente
+  G1 Z2.0 F3000 ; Sobe o bico antes de ir para a peça
+  
+
+[gcode_macro PRINT_END]
+gcode:
+    SAVE_GCODE_STATE NAME=STATE_PRINT_END MOVE=0
+    
+    {% set th = printer.toolhead %}
+    {% set x_safe = th.position.x + 20 * (1 if th.axis_maximum.x - th.position.x > 20 else -1) %}
+    {% set y_safe = th.position.y + 20 * (1 if th.axis_maximum.y - th.position.y > 20 else -1) %}
+    {% set z_safe = [th.position.z + 2, th.axis_maximum.z]|min %}
+    
+    M400                           ; wait for buffer to clear
+    G92 E0                         ; zero the extruder
+    G1 E-4.0 F3600                 ; retract filament
+    
+    TURN_OFF_HEATERS
+    
+    G90                                      ; absolute positioning
+    G0 X{x_safe} Y{y_safe} Z{z_safe} F20000  ; move nozzle to remove stringing
+    G0 X{th.axis_maximum.x - 2} Y{th.axis_maximum.y - 2} F3600  ; park nozzle at rear
+    
+    M107                                     ; turn off fan
+    BED_MESH_CLEAR
+    M117 Finalizando...
+    
+    UPDATE_DELAYED_GCODE ID=delayed_nevermore_off DURATION=300 # Desliga após 5 min (300 seg)
+    
+[delayed_gcode delayed_nevermore_off]
+gcode:
+    M117 Desligando NEVERMORE
+    NEVERMORE_OFF
+
+
+
+
+
+#######################  FILAMENTO #####################################
+
+[gcode_macro LOAD_FILAMENT]
+variable_load_distance: 15         # Distance to load filament into the extruder
+variable_purge_distance: 60        # Distance to purge filament after loading
+variable_nozzle_preheat_temp: 240  # Default preheat temperature for the nozzle
+variable_turn_off_extruder: False   # Option to turn off the extruder after loading (True/False)
+gcode:
+    # Parameters and settings
+    {% set load_speed = params.LOAD_SPEED|default(600) %}  # Speed in mm/min for fast filament loading
+    {% set purge_speed = params.PURGE_SPEED|default(300) %}  # Speed in mm/min for purging filament
+    {% set target_temp = params.TARGET_TEMP|default(nozzle_preheat_temp) %}  # Target temperature for the nozzle
+    {% set min_temp = params.MIN_TEMP|default(180) %}  # Minimum safe temperature for extrusion
+
+    # Save current state of the printer
+    SAVE_GCODE_STATE NAME=load_state
+
+    # Heat directly to the target temperature if it's above the minimum temperature
+    {% if target_temp >= min_temp %}
+        M104 S{target_temp} ; Set extruder to target temperature
+        M109 S{target_temp} ; Wait for extruder to reach target temperature
+    {% else %}
+        # Heat to minimum temperature first if target is too low
+        M104 S{min_temp} ; Set extruder to safe minimum temperature
+        M109 S{min_temp} ; Wait for extruder to reach safe minimum temperature
+    {% endif %}
+
+    # Begin filament loading process
+    G91 ; Set relative positioning for extrusion
+    G92 E0 ; Reset extruder position
+    G1 E{load_distance} F{load_speed} ; Load filament at the specified loading speed
+    G1 E{purge_distance} F{purge_speed} ; Purge filament at the slower purging speed
+
+    # Optionally turn off the extruder heater after loading
+    {% if turn_off_extruder %}
+        M104 S0 ; Turn off extruder heater
+    {% endif %}
+
+    # Restore previous state of the printer
+    G90 ; Restore absolute positioning
+    RESTORE_GCODE_STATE NAME=load_state
+
+    # Completion message
+    M117 Filament load complete
+
+#################################
+[gcode_macro UNLOAD_FILAMENT]
+variable_unload_distance: 100      # Distance to retract filament from the extruder
+variable_nozzle_preheat_temp: 240  # Default preheat temperature for unloading
+variable_turn_off_extruder: False   # Option to turn off the extruder after unloading (True/False)
+gcode:
+    # Parameters and settings
+    {% set retract_speed = params.RETRACT_SPEED|default(600) %}  # Speed for retracting filament
+    {% set target_temp = params.TARGET_TEMP|default(nozzle_preheat_temp) %}  # Target temperature for the nozzle
+    {% set min_temp = params.MIN_TEMP|default(180) %}  # Minimum safe temperature for extrusion
+
+    # Save current state of the printer
+    SAVE_GCODE_STATE NAME=unload_state
+
+    # Heat the nozzle to the target temperature if required
+    {% if printer.extruder.temperature < target_temp %}
+        # Ensure the nozzle is heated to the target temperature or at least the minimum safe temperature
+        {% if target_temp >= min_temp %}
+            M104 S{target_temp} ; Set extruder to target temperature
+            M109 S{target_temp} ; Wait for extruder to reach target temperature
+        {% else %}
+            M104 S{min_temp} ; Set extruder to safe minimum temperature
+            M109 S{min_temp} ; Wait for extruder to reach safe minimum temperature
+        {% endif %}
+    {% endif %}
+
+    # Begin filament unloading process
+    G91 ; Set relative positioning for extrusion
+    G92 E0 ; Reset extruder position
+    G1 E20 F200
+    G1 E-{unload_distance} F{retract_speed} ; Retract filament at the specified speed
+
+    # Optionally turn off the extruder heater after unloading
+    {% if turn_off_extruder %}
+        M104 S0 ; Turn off extruder heater
+    {% endif %}
+
+    # Restore previous state of the printer
+    G90 ; Restore absolute positioning
+    RESTORE_GCODE_STATE NAME=unload_state
+
+    # Completion message
+    M117 Filament unload complete
+
+[shaketune]
+
+    
+[gcode_macro CUT_FILAMENT]
+
+gcode:
+    # --- CONFIGURAÇÕES DO USUÁRIO ---
+    {% set PIN_X = 17 %}               # Coordenada X de aproximação (ao lado do pino)
+    {% set PIN_Y = 256 %}              # Coordenada Y onde a cabeça se alinha ao pino
+    {% set CUT_X = 0 %}               # Coordenada X final do corte (empurrando o pino)
+    
+    {% set RETRACT_DIST = 15 %}        # Quantos mm recuar o filamento após o corte
+    # ---------------------------------
+
+    SAVE_GCODE_STATE NAME=cut_filament_state
+    
+    # 1. Garante posicionamento absoluto
+    G90 
+    
+    # 2. Move rapidamente para a posição Y do pino, mantendo o X seguro fora do caminho
+    G1 Y{PIN_Y} F12000
+    
+    # 3. Alinha no X inicial de aproximação
+    G1 X{PIN_X} F12000
+    
+    # 4. Movimento rápido de corte (Impacto lateral contra o pino)
+    G1 X{CUT_X} F6000
+    
+    # 5. Retorno rápido para a posição inicial para liberar a mola do cortador
+    G1 X{PIN_X} F12000
+    
+    # 6. Retração imediata do filamento para tirá-lo da zona da lâmina
+    G91
+    G1 E-{RETRACT_DIST} F3000
+    G90
+
+    RESTORE_GCODE_STATE NAME=cut_filament_state
+
+    
+################### FIM DAS MACROS  ################################
+
+
+#*# <---------------------- SAVE_CONFIG ---------------------->
+#*# DO NOT EDIT THIS BLOCK OR BELOW. The contents are auto-generated.
+#*#
+#*# [heater_bed]
+#*# control = pid
+#*# pid_kp = 65.801
+#*# pid_ki = 2.346
+#*# pid_kd = 461.433
+#*#
+#*# [probe]
+#*# z_offset = -1.975
+#*#
+#*# [input_shaper]
+#*# shaper_type_x = 2hump_ei
+#*# shaper_freq_x = 89.2
+#*# shaper_type_y = 2hump_ei
+#*# shaper_freq_y = 67.4
+#*#
+#*# [extruder]
+#*# control = pid
+#*# pid_kp = 17.771
+#*# pid_ki = 0.811
+#*# pid_kd = 97.298
